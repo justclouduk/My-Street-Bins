@@ -9,8 +9,7 @@ Works perfectly offline or hosted via GitHub Pages.
 
 ## 🚀 Live App
 
-👉 **[Open Which Bin Tonight](https://YOUR-USERNAME.github.io/bins-app/)**  
-*(Replace `YOUR-USERNAME` with your GitHub handle once Pages is enabled.)*
+👉 **[Open Which Bin Tonight](https://justclouduk.github.io/My-Street-Bins/)**  
 
 You can **Add to Home Screen** on Android or iOS for a true “app-like” experience.
 
