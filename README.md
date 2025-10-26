@@ -9,7 +9,7 @@ Works perfectly offline or hosted via GitHub Pages.
 
 ## 🚀 Live App
 
-👉 **[Open Which Bin Tonight](https://justclouduk.github.io/My-Street-Bins/)**  
+👉 **[Open Which Bin Tonight](https://justbins.uk)**  
 
 You can **Add to Home Screen** on Android or iOS for a true “app-like” experience.
 
