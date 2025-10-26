@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Which bin tonight?</title>
+    <style>
+        :root {
+            color-scheme: light dark;
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --text-main: #f8fafc;
+            --text-dim: #94a3b8;
+            --accent: #38bdf8;
+            --radius-xl: 1.25rem;
+            --radius-lg: 0.75rem;
+            --gap: 1rem;
+            --font-stack: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+                Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        @media (prefers-color-scheme: light) {
+            :root {
+                --bg: #f8fafc;
+                --card-bg: #ffffff;
+                --text-main: #0f172a;
+                --text-dim: #64748b;
+                --accent: #0ea5e9;
+            }
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--text-main);
+            font-family: var(--font-stack);
+            display: grid;
+            min-height: 100dvh;
+            place-items: center;
+            padding: 2rem 1rem 4rem;
+        }
+
+        .app {
+            width: 100%;
+            max-width: 480px;
+            display: grid;
+            gap: var(--gap);
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: var(--radius-xl);
+            box-shadow:
+                0 30px 80px -10px rgb(0 0 0 / 0.6),
+                0 2px 4px rgb(0 0 0 / 0.4);
+            padding: 1.5rem 1.25rem;
+            display: grid;
+            gap: 1rem;
+        }
+
+        header {
+            display: grid;
+            gap: 0.25rem;
+        }
+
+        .today-label {
+            font-size: 0.9rem;
+            color: var(--text-dim);
+            font-weight: 500;
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            line-height: 1.4;
+        }
+
+        .big-text {
+            font-size: clamp(1.4rem, 2vw + 1rem, 1.8rem);
+            font-weight: 600;
+            line-height: 1.2;
+            color: var(--text-main);
+        }
+
+        .bins-list {
+            display: grid;
+            gap: 0.75rem;
+        }
+
+        .bin-pill {
+            border-radius: var(--radius-lg);
+            padding: 0.75rem 1rem;
+            background: rgba(56, 189, 248, 0.08);
+            border: 1px solid rgba(56, 189, 248, 0.4);
+            display: grid;
+            grid-template-columns: auto 64px;
+            align-items: center;
+            column-gap: 1rem;
+            min-height: 4rem;
+        }
+
+        .bin-left {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+            min-width: 0;
+        }
+
+        .bin-name {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--accent);
+            line-height: 1.3;
+        }
+
+        .bin-notes {
+            color: var(--text-dim);
+            font-size: 0.8rem;
+            line-height: 1.4;
+        }
+
+        .bin-img {
+            width: 64px;
+            height: 64px;
+            object-fit: contain;
+            border-radius: 0.5rem;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .status-msg {
+            font-size: 1rem;
+            line-height: 1.4;
+            color: var(--text-main);
+        }
+
+        .next-collections {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            line-height: 1.4;
+            white-space: pre-line;
+        }
+
+        footer {
+            text-align: center;
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            line-height: 1.4;
+        }
+
+        footer button {
+            background: none;
+            color: inherit;
+            border: 1px solid var(--text-dim);
+            border-radius: 0.75rem;
+            padding: 0.4rem 0.75rem;
+            font-size: 0.75rem;
+            cursor: pointer;
+        }
+
+        footer button:active {
+            scale: .98;
+        }
+
+        .config-area {
+            display: none;
+            white-space: pre;
+            background: var(--card-bg);
+            border-radius: 0.75rem;
+            padding: 1rem;
+            font-size: .7rem;
+            line-height: 1.4;
+            overflow-x: auto;
+            border: 1px solid rgba(148, 163, 184, .3);
+            max-height: 40vh;
+            text-align: left;
+            margin-bottom: .75rem;
+        }
+
+        .config-area.show {
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+    <main class="app">
+        <section class="card">
+            <header>
+                <div class="today-label">
+                    <span id="relativeLabel">Tonight</span>
+                    <span id="dateLabel"></span>
+                </div>
+                <div id="headline" class="big-text">Loading…</div>
+            </header>
+
+            <div id="bins" class="bins-list"></div>
+
+            <div class="status-msg" id="statusMsg"></div>
+
+            <div class="next-collections" id="nextCollections"></div>
+        </section>
+
+        <footer>
+            <div style="margin-bottom:0.5rem">
+                <button id="toggleConfig">Show schedule data</button>
+            </div>
+            <div id="configWrap" class="config-area"></div>
+            <div>Bin checker • local only • v1</div>
+        </footer>
+    </main>
+
+    <script>
+        /*********************************************************
+         * YOUR PERSONALISED COLLECTION SCHEDULE 👇
+         *
+         * - Collected Monday morning
+         * - Little Brown Bin (Food Waste) goes out every week
+         *********************************************************/
+
+        const collections = [
+            {
+                date: "2025-10-27", bins: [
+                    "Black Bin (General Recycling)",
+                    "Brown Bin (Gardening Waste)",
+                    "Little Brown Bin (Food Waste)"
+                ]
+            },
+            {
+                date: "2025-11-03", bins: [
+                    "Blue Bin (Cardboard and Paper)",
+                    "Little Brown Bin (Food Waste)"
+                ]
+            },
+            {
+                date: "2025-11-10", bins: [
+                    "Purple Bin (General Waste)",
+                    "Little Brown Bin (Food Waste)"
+                ]
+            },
+            {
+                date: "2025-11-17", bins: [
+                    "Black Bin (General Recycling)",
+                    "Brown Bin (Gardening Waste)",
+                    "Little Brown Bin (Food Waste)"
+                ]
+            },
+            {
+                date: "2025-11-24", bins: [
+                    "Blue Bin (Cardboard and Paper)",
+                    "Little Brown Bin (Food Waste)"
+                ]
+            },
+            {
+                date: "2025-12-01", bins: [
+                    "Purple Bin (General Waste)",
+                    "Little Brown Bin (Food Waste)"
+                ]
+            }
+        ];
+
+        /*********************************************************
+         * IMAGE PICKER
+         * Matches the bin name text to the right PNG file.
+         * Make sure the PNGs are in the same folder as this HTML.
+         *********************************************************/
+        function getBinImage(binName) {
+            if (/little brown/i.test(binName)) return "food-bin.png";       // Little Brown Bin (Food Waste)
+            if (/brown bin/i.test(binName)) return "brown-bin.png";      // Brown Bin (Gardening Waste)
+            if (/black bin/i.test(binName)) return "black-bin.png";      // Black Bin (General Recycling)
+            if (/blue bin/i.test(binName)) return "blue-bin.png";       // Blue Bin (Cardboard and Paper)
+            if (/purple bin/i.test(binName)) return "purple-bin.png";     // Purple Bin (General Waste)
+            return null;
+        }
+
+        /*********************************************************
+         * HELPER FUNCTIONS (dates, lookup etc)
+         *********************************************************/
+        function yyyyMmDd(d) {
+            const yr = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, "0");
+            const day = String(d.getDate()).padStart(2, "0");
+            return `${yr}-${m}-${day}`;
+        }
+
+        function prettyDate(d) {
+            const wk = d.toLocaleDateString(undefined, { weekday: "short" });
+            const day = d.getDate();
+            const mon = d.toLocaleDateString(undefined, { month: "short" });
+            const yr = d.getFullYear();
+            return `${wk} ${day} ${mon} ${yr}`;
+        }
+
+        function getNextCollection(forDateYmd) {
+            for (const c of collections) {
+                if (c.date >= forDateYmd) {
+                    return c;
+                }
+            }
+            return null;
+        }
+
+        function getUpcoming(limit = 3, startAfterYmd) {
+            const out = [];
+            for (const c of collections) {
+                if (c.date >= startAfterYmd) {
+                    out.push(c);
+                    if (out.length >= limit) break;
+                }
+            }
+            return out;
+        }
+
+        /*********************************************************
+         * RENDER UI
+         *********************************************************/
+        function render() {
+            const now = new Date();
+            const tomorrow = new Date(now);
+            tomorrow.setDate(now.getDate() + 1);
+
+            const tomorrowYmd = yyyyMmDd(tomorrow);
+            const tonightCollection = getNextCollection(tomorrowYmd);
+
+            const dateLabel = document.getElementById("dateLabel");
+            const headline = document.getElementById("headline");
+            const binsEl = document.getElementById("bins");
+            const statusMsg = document.getElementById("statusMsg");
+            const nextEl = document.getElementById("nextCollections");
+
+            dateLabel.textContent = `for Mon AM ${prettyDate(tomorrow)}`;
+            binsEl.innerHTML = "";
+            statusMsg.textContent = "";
+            nextEl.textContent = "";
+
+            if (!tonightCollection) {
+                headline.textContent = "No collection info 🔄";
+                statusMsg.textContent = "Your schedule list doesn't go far enough. Add more dates.";
+                return;
+            }
+
+            if (tonightCollection.bins.length === 0) {
+                headline.textContent = "Nothing goes out tonight 🎉";
+            } else if (tonightCollection.bins.length === 1) {
+                headline.textContent = `Put out: ${tonightCollection.bins[0]}`;
+            } else {
+                headline.textContent = "Put these out tonight:";
+            }
+
+            tonightCollection.bins.forEach(binName => {
+                const pill = document.createElement("div");
+                pill.className = "bin-pill";
+
+                // left side (text)
+                const left = document.createElement("div");
+                left.className = "bin-left";
+
+                const main = document.createElement("div");
+                main.className = "bin-name";
+                main.textContent = binName;
+
+                const note = document.createElement("div");
+                note.className = "bin-notes";
+
+                if (/little brown/i.test(binName)) {
+                    note.textContent = "Food Waste (goes out every week).";
+                } else if (/brown bin/i.test(binName)) {
+                    note.textContent = "Gardening Waste.";
+                } else if (/black bin/i.test(binName)) {
+                    note.textContent = "General Recycling (cans/plastic/glass etc).";
+                } else if (/blue bin/i.test(binName)) {
+                    note.textContent = "Cardboard and Paper.";
+                } else if (/purple bin/i.test(binName)) {
+                    note.textContent = "General Waste / landfill.";
+                } else {
+                    note.textContent = "";
+                }
+
+                left.appendChild(main);
+                left.appendChild(note);
+
+                // right side (image)
+                const imgSrc = getBinImage(binName);
+                if (imgSrc) {
+                    const img = document.createElement("img");
+                    img.className = "bin-img";
+                    img.src = imgSrc;
+                    img.alt = binName;
+                    pill.appendChild(left);
+                    pill.appendChild(img);
+                } else {
+                    // fallback: no image
+                    pill.appendChild(left);
+                }
+
+                binsEl.appendChild(pill);
+            });
+
+            const collDatePretty = (() => {
+                const parts = tonightCollection.date.split("-");
+                const dObj = new Date(
+                    Number(parts[0]),
+                    Number(parts[1]) - 1,
+                    Number(parts[2])
+                );
+                return prettyDate(dObj);
+            })();
+
+            statusMsg.textContent =
+                `These bins will be collected on ${collDatePretty} morning.`;
+
+            const upcoming = getUpcoming(3, tomorrowYmd);
+            if (upcoming.length > 1) {
+                const lines = upcoming.map(c => {
+                    const dParts = c.date.split("-");
+                    const dObj = new Date(
+                        Number(dParts[0]),
+                        Number(dParts[1]) - 1,
+                        Number(dParts[2])
+                    );
+                    return `${prettyDate(dObj)} → ${c.bins.join(", ") || "Nothing"}`;
+                });
+                nextEl.textContent = "Next collections:\n" + lines.join("\n");
+            }
+
+            const cfg = document.getElementById("configWrap");
+            cfg.textContent =
+                `// Paste/update this bit when the council changes rounds:
+const collections = ${JSON.stringify(collections, null, 2)};`;
+        }
+
+        /*********************************************************
+         * SHOW/HIDE RAW SCHEDULE
+         *********************************************************/
+        document.getElementById("toggleConfig").addEventListener("click", () => {
+            const wrap = document.getElementById("configWrap");
+            wrap.classList.toggle("show");
+            document.getElementById("toggleConfig").textContent =
+                wrap.classList.contains("show") ? "Hide schedule data" : "Show schedule data";
+        });
+
+        // sort just in case
+        collections.sort((a, b) => a.date.localeCompare(b.date));
+
+        // go
+        render();
+    </script>
+</body>
+
+</html>
